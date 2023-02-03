@@ -3168,11 +3168,9 @@ CMyWnd* MyWnd = nullptr;
 
 void CreateMyWindow()
 {
-	WriteChatf("CreateMyWindow:Start");
 	if (MyWnd) return;
 	if (pSidlMgr->FindScreenPieceTemplate("NetBotsWnd"))
 	{
-		WriteChatf("CreateMyWindow:Found NetBotsWnd");
 		MyWnd = new CMyWnd;
 		if (MyWnd && MyWnd->ErrorLoading)
 		{
@@ -3187,7 +3185,6 @@ void CreateMyWindow()
 				MyWnd->List->AddString("", 0xFFFFFFFF, 0, 0);
 		}
 	}
-	WriteChatf("CreateMyWindow:Finished");
 }
 
 void DestroyMyWindow()
