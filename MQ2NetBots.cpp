@@ -40,7 +40,6 @@ using namespace std;
 
 double compile_date();
 #define        PLUGIN_DATE           compile_date()
-#define        PLUGIN_VERS           (double)3.93
 #define	       PLUGIN_TITLE          "MQ2NetBots"
 
 #define        PETS_MAX              65
@@ -55,7 +54,7 @@ double compile_date();
 #define        DEBUGGING             0
 
 PreSetup("MQ2NetBots");
-PLUGIN_VERSION(PLUGIN_VERS);
+PLUGIN_VERSION(3.93);
 
 double compile_date()
 {
@@ -814,7 +813,7 @@ char* MakeNVERS(char(&Buffer)[SizeT])
 {
 	if (strlen(Buffer))
 	{
-		sprintf_s(Buffer, "%.2f", PLUGIN_VERS);
+		sprintf_s(Buffer, "%.2f", MQ2Version);
 	}
 	return Buffer;
 }
@@ -2761,7 +2760,7 @@ void Command(PSPAWNINFO pChar, PCHAR Cmd)
 			WritePrivateProfileString(PLUGIN_TITLE, "UseSimpleSearch", bUseSimpleSearch ? "1" : "0", INIFileName);
 		}
 	} while (strlen(Tmp));
-	WriteChatf("%s:: (%s) Grab (%s) Send (%s) Ext (%s) Simple (%s)    Version=\at%.2f", PLUGIN_TITLE, NetStat ? "\agon\ax" : "\aroff\ax", NetGrab ? "\agon\ax" : "\aroff\ax", NetSend ? "\agon\ax" : "\aroff\ax", bExtended ? "\agon\ax" : "\aroff\ax", bUseSimpleSearch ? "\agon\ax" : "\aroff\ax", PLUGIN_VERS);
+	WriteChatf("%s:: (%s) Grab (%s) Send (%s) Ext (%s) Simple (%s)    Version=\at%.2f", PLUGIN_TITLE, NetStat ? "\agon\ax" : "\aroff\ax", NetGrab ? "\agon\ax" : "\aroff\ax", NetSend ? "\agon\ax" : "\aroff\ax", bExtended ? "\agon\ax" : "\aroff\ax", bUseSimpleSearch ? "\agon\ax" : "\aroff\ax", MQ2Version);
 }
 
 void CommandNote(PSPAWNINFO pChar, PCHAR Cmd)
