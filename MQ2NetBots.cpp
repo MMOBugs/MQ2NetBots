@@ -2864,154 +2864,6 @@ PLUGIN_API void SetGameState(DWORD GameState)
 	}
 }
 
-void BCZ(PSPAWNINFO pChar, PCHAR Cmd)
-{
-	char szCmd[MAX_STRING] = { 0 };
-	if (!Cmd || !Cmd[0])
-		return;
-	if (!pLocalPC)
-		return;
-	if (!pLocalPlayer)
-		return;
-	if (!EQBCConnected())
-		return;
-	if (NetStat && NetGrab)
-	{
-		for (auto l = NetMap.begin(); l != NetMap.end(); l++)
-		{
-			BotInfo* BotRec = &(*l).second;
-			if (BotRec->SpawnID == 0)
-				continue;
-			if (BotRec->SpawnID == pLocalPlayer->SpawnID)
-				continue;
-			unsigned long botZID, myZID;
-			botZID = BotRec->ZoneID;
-			if (botZID > 0x7FFF)
-				botZID &= 0x7FFF;
-			myZID = pLocalPC->zoneId;
-			if (myZID > 0x7FFF)
-				myZID &= 0x7FFF;
-			if (myZID != botZID)
-				continue;
-			if (pLocalPC->instance != BotRec->InstID)
-				continue;
-			sprintf_s(szCmd, "/bct %s %s", BotRec->Name, Cmd);
-			HideDoCommand(pLocalPlayer, szCmd, false);
-		}
-	}
-}
-
-void BCZA(PSPAWNINFO pChar, PCHAR Cmd)
-{
-	char szCmd[MAX_STRING] = { 0 };
-	if (!Cmd || !Cmd[0])
-		return;
-	if (!pLocalPC)
-		return;
-	if (!pLocalPlayer)
-		return;
-	if (!EQBCConnected())
-		return;
-	if (NetStat && NetGrab)
-	{
-		for (auto l = NetMap.begin(); l != NetMap.end(); l++)
-		{
-			BotInfo* BotRec = &(*l).second;
-			if (BotRec->SpawnID == 0)
-				continue;
-			unsigned long botZID, myZID;
-			botZID = BotRec->ZoneID;
-			if (botZID > 0x7FFF)
-				botZID &= 0x7FFF;
-			myZID = pLocalPC->zoneId;
-			if (myZID > 0x7FFF)
-				myZID &= 0x7FFF;
-			if (myZID != botZID)
-				continue;
-			if (pLocalPC->instance != BotRec->InstID)
-				continue;
-			sprintf_s(szCmd, "/bct %s %s", BotRec->Name, Cmd);
-			HideDoCommand(pLocalPlayer, szCmd, false);
-		}
-	}
-}
-
-void BCGZ(PSPAWNINFO pChar, PCHAR Cmd)
-{
-	char szCmd[MAX_STRING] = { 0 };
-	if (!Cmd || !Cmd[0])
-		return;
-	if (!pLocalPC)
-		return;
-	if (!pLocalPlayer)
-		return;
-	if (!EQBCConnected())
-		return;
-	if (NetStat && NetGrab)
-	{
-		for (auto l = NetMap.begin(); l != NetMap.end(); l++)
-		{
-			BotInfo* BotRec = &(*l).second;
-			if (BotRec->SpawnID == 0)
-				continue;
-			if (BotRec->SpawnID == pLocalPlayer->SpawnID)
-				continue;
-			unsigned long botZID, myZID;
-			botZID = BotRec->ZoneID;
-			if (botZID > 0x7FFF)
-				botZID &= 0x7FFF;
-			myZID = pLocalPC->zoneId;
-			if (myZID > 0x7FFF)
-				myZID &= 0x7FFF;
-			if (myZID != botZID)
-				continue;
-			if (pLocalPC->instance != BotRec->InstID)
-				continue;
-			if (!inGroup(BotRec->Name))
-				continue;
-			sprintf_s(szCmd, "/bct %s %s", BotRec->Name, Cmd);
-			HideDoCommand(pLocalPlayer, szCmd, false);
-		}
-	}
-}
-
-void BCGZA(PSPAWNINFO pChar, PCHAR Cmd)
-{
-	char szCmd[MAX_STRING] = { 0 };
-	if (!Cmd || !Cmd[0])
-		return;
-	if (!pLocalPC)
-		return;
-	if (!pLocalPlayer)
-		return;
-	if (!EQBCConnected())
-		return;
-	if (NetStat && NetGrab)
-	{
-		for (auto l = NetMap.begin(); l != NetMap.end(); l++)
-		{
-			BotInfo* BotRec = &(*l).second;
-			if (BotRec->SpawnID == 0)
-				continue;
-			unsigned long botZID, myZID;
-			botZID = BotRec->ZoneID;
-			if (botZID > 0x7FFF)
-				botZID &= 0x7FFF;
-			myZID = pLocalPC->zoneId;
-			if (myZID > 0x7FFF)
-				myZID &= 0x7FFF;
-			if (myZID != botZID)
-				continue;
-			if (pLocalPC->instance != BotRec->InstID)
-				continue;
-			if (!inGroup(BotRec->Name))
-				continue;
-			sprintf_s(szCmd, "/bct %s %s", BotRec->Name, Cmd);
-			HideDoCommand(pLocalPlayer, szCmd, false);
-		}
-	}
-}
-
 PLUGIN_API void InitializePlugin()
 {
 	Packet.Reset();
@@ -3068,10 +2920,6 @@ PLUGIN_API void InitializePlugin()
 		RemoveMQ2Data("NetBots");
 	AddMQ2Data("NetBots", dataNetBots);
 	AddCommand("/netbots", Command);
-	AddCommand("/bcz", BCZ);
-	AddCommand("/bcza", BCZA);
-	AddCommand("/bcgz", BCGZ);
-	AddCommand("/bcgza", BCGZA);
 	AddCommand("/netnote", CommandNote);
 	AddXMLFile("MQUI_NetBotsWnd.xml");
 	if (gGameState == GAMESTATE_INGAME)
@@ -3096,10 +2944,6 @@ PLUGIN_API void ShutdownPlugin()
 {
 	RemoveCommand("/netbots");
 	RemoveCommand("/netnote");
-	RemoveCommand("/bcz");
-	RemoveCommand("/bcza");
-	RemoveCommand("/bcgz");
-	RemoveCommand("/bcgza");
 	Packet.Reset();
 	RemoveMQ2Data("NetBots");
 	delete pNetBotsType;
