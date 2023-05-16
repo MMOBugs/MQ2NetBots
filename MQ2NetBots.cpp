@@ -266,6 +266,16 @@ void EQBCBroadCast(PCHAR Buffer)
 
 BotInfo* BotFind(const char* Name)
 {
+	unsigned int iNameVal = atoi(Name);
+	if (IsNumber(Name))
+	{
+		if (iNameVal <= NetMap.size() && iNameVal > 0)
+		{
+			auto it = NetMap.begin();
+			std::advance(it, iNameVal - 1);
+			return (NetMap.end() == it) ? NULL : &(*it).second;
+		}
+	}
 	auto f = NetMap.find(Name);
 	return (NetMap.end() == f) ? NULL : &(*f).second;
 }
