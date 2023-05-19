@@ -1756,7 +1756,11 @@ public:
 
 	void Search(const char* Index)
 	{
-		if (!Index || Index && Index[0] == '\0')
+		if (!Index)
+		{
+			BotRec = 0;
+		}
+		else if (Index[0] == '\0')
 		{
 			BotRec = 0;
 		}
@@ -1764,9 +1768,16 @@ public:
 		{
 			BotRec = 0;
 		}
-		else if (!BotRec || (BotRec && Index && _stricmp(BotRec->Name, Index)))
+		else if (!BotRec || BotRec == nullptr)
 		{
 			BotRec = BotFind(Index);
+		}
+		else if (Index)
+		{
+			if (_stricmp(BotRec->Name, Index))
+			{
+				BotRec = BotFind(Index);
+			}
 		}
 	}
 
