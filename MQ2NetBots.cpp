@@ -1774,9 +1774,12 @@ public:
 		}
 		else if (Index)
 		{
-			if (_stricmp(BotRec->Name, Index))
+			if (BotRec)
 			{
-				BotRec = BotFind(Index);
+				if (_stricmp(BotRec->Name, Index))
+				{
+					BotRec = BotFind(Index);
+				}
 			}
 		}
 	}
@@ -2716,10 +2719,14 @@ public:
 
 bool dataNetBots(const char* Index, MQTypeVar& Dest)
 {
-	Dest.DWord = 1;
-	Dest.Type = pNetBotsType;
-	pNetBotsType->Search(Index);
-	return true;
+	if (pNetBotsType)
+	{
+		Dest.DWord = 1;
+		Dest.Type = pNetBotsType;
+		pNetBotsType->Search(Index);
+		return true;
+	}
+	return false;
 }
 
 //=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=//
