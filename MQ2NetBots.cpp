@@ -54,7 +54,7 @@ double compile_date();
 #define        DEBUGGING             0
 
 PreSetup("MQ2NetBots");
-PLUGIN_VERSION(3.93);
+PLUGIN_VERSION(4.00);
 
 double compile_date()
 {
@@ -111,7 +111,7 @@ enum
 	PETIL, SPGEM, SONGS, STATE, TARGT, ZONES, DURAS, LOCAT, HEADN,
 	AAPTS, OOCST, NOTE, DETR, MSTATE, MNAME, NAVACT, NAVPAU, NVERS,
 	BOTACT, CAMPSTATUS, CAMPX, CAMPY, CAMPRADIUS, CAMPDISTANCE, EQBC,
-	FREEINV, GROUPLEADER, ESIZE
+	FREEINV, GROUPLEADER, LUAINFO, ESIZE
 };
 
 enum
@@ -155,7 +155,7 @@ public:
 	long              Duration[NUM_LONG_BUFFS]; // Buff duration
 	long              FreeBuff;            // FreeBuffSlot;
 	char			  GroupLeader[64];	   // Group Leader Name
-#ifdef EMU
+#ifdef HAS_LEADERSHIP_EXPERIENCE
 	double            glXP;                // glXP
 #endif
 	DWORD             aaXP;                // aaXP
@@ -171,6 +171,7 @@ public:
 	int               Detrimental[DSIZE];
 	int				  MacroState;
 	char			  MacroName[MAX_PATH];
+	char			  LuaInfo[MAX_STRING];
 	bool			  NavActive;
 	bool			  NavPaused;
 	double			  Version;
@@ -677,8 +678,8 @@ void __stdcall ParseInfo(unsigned int ID, void* pData, PBLECHVALUE pValues)
 			case 17: CurBot->State = (DWORD)atol(pValues->Value.c_str());  break;
 			case 18: CurBot->XP = (__int64)atol(pValues->Value.c_str()); break;
 			case 19: CurBot->aaXP = (DWORD)atol(pValues->Value.c_str()); break;
-#ifdef EMU
-			case 20: CurBot->glXP = atof(pValues->Value.c_str());        break;
+#ifdef HAS_LEADERSHIP_EXPERIENCE
+			case 20: CurBot->glXP = GetDoubleFromString(pValues->Value, 0.0);        break;
 #endif
 			case 21: CurBot->FreeBuff = atol(pValues->Value.c_str());        break;
 			case 22: strcpy_s(CurBot->Leader, pValues->Value.c_str());         break;
@@ -737,6 +738,8 @@ void __stdcall ParseInfo(unsigned int ID, void* pData, PBLECHVALUE pValues)
 				CurBot->FreeInventory = atoi(pValues->Value.c_str()); break;
 			case 104:
 				strcpy_s(CurBot->GroupLeader, pValues->Value.c_str()); break;
+			case 105:
+				strcpy_s(CurBot->LuaInfo, pValues->Value.c_str()); break;
 			}
 			pValues = pValues->pNext;
 		}
@@ -835,21 +838,17 @@ char* MakeENDUS(char(&Buffer)[SizeT])
 	else strcpy_s(Buffer, "/");
 	return Buffer;
 }
-#ifndef EMU
+
 template <unsigned int SizeT>
 char* MakeEXPER(char(&Buffer)[SizeT])
 {
-	sprintf_s(Buffer, "%I64d:%d", pLocalPC->Exp, pLocalPC->AAExp);
-	return Buffer;
-}
-#else
-template <unsigned int SizeT>
-char* MakeEXPER(char(&Buffer)[SizeT])
-{
+#ifdef HAS_LEADERSHIP_EXPERIENCE
 	sprintf_s(Buffer, "%I64d:%d:%02.3f", pLocalPC->Exp, pLocalPC->AAExp, pLocalPC->GroupLeadershipExp);
+#else
+	sprintf_s(Buffer, "%I64d:%d", pLocalPC->Exp, pLocalPC->AAExp);
+#endif
 	return Buffer;
 }
-#endif
 
 template <unsigned int SizeT>
 char* MakeLEADR(char(&Buffer)[SizeT])
@@ -887,6 +886,32 @@ char* MakeMSTATE(char(&Buffer)[SizeT])
 			Status = MACRO_PAUSED;
 	}
 	_itoa_s(Status, Buffer, 10);
+	return Buffer;
+}
+
+template <unsigned int SizeT>
+char* MakeLUA(char(&Buffer)[SizeT])
+{
+	char szTemp[MAX_STRING] = { 0 };
+	char szScriptName[MAX_STRING] = { 0 };
+	char* token = NULL;
+	char* next_token = NULL;
+	Buffer[0] = '\0';
+	strcpy_s(szTemp, "${Lua.PIDs}");
+	ParseMacroData(szTemp, sizeof(szTemp));
+	token = strtok_s(szTemp, ",", &next_token);
+	while (token != NULL)
+	{
+		sprintf_s(szScriptName, "${Lua.Script[%s].Name}", token);
+		ParseMacroData(szScriptName, sizeof(szScriptName));
+		if (szScriptName[0] && !_stricmp(szScriptName, "NULL"))
+		{
+			if (strlen(Buffer))
+				strcat_s(Buffer, ",");
+			strcat_s(Buffer, szScriptName);
+		}
+		token = strtok_s(NULL, ",", &next_token);
+	}
 	return Buffer;
 }
 
@@ -1022,22 +1047,21 @@ template <unsigned int _Size>
 char* MakeGROUPLEADER(CHAR(&Buffer)[_Size])
 {
 	CHAR glName[MAX_STRING] = { 0 };
-	PCHARINFO pChar = GetCharInfo();
-	if (!pChar)
+	if (!pLocalPC)
 	{
 		strcpy_s(Buffer, "");
 	}
-	else if (!pChar->pGroupInfo)
+	else if (!pLocalPC->pGroupInfo)
 	{
 		strcpy_s(Buffer, "");
 	}
-	else if (!pChar->pGroupInfo->pLeader)
+	else if (!pLocalPC->pGroupInfo->pLeader)
 	{
 		strcpy_s(Buffer, "");
 	}
 	else
 	{
-		strcpy_s(glName, pChar->pGroupInfo->pLeader->Name.c_str());
+		strcpy_s(glName, pLocalPC->pGroupInfo->pLeader->Name.c_str());
 		sprintf_s(Buffer, "%s", glName);
 	}
 	return Buffer;
@@ -1062,8 +1086,8 @@ char* MakePBUFF(char(&Buffer)[SizeT])
 {
 	long SpellID; char tmp[MAX_STRING]; Buffer[0] = 0;
 	PSPAWNINFO Pet = GetSpawnByID(pLocalPlayer->PetID);
-	for (int b = 0; b < PETS_MAX; b++)
-		if ((SpellID = (Pet && pPetInfoWnd) ? pPetInfoWnd->Buff[b] : 0) > 0)
+	for (int b = 0; b < pPetInfoWnd->GetMaxBuffs(); b++)
+		if ((SpellID = (Pet && pPetInfoWnd) ? pPetInfoWnd->GetBuff(b) : 0) > 0)
 		{
 			sprintf_s(tmp, "%d:", SpellID);
 			strcat_s(Buffer, tmp);
@@ -1076,12 +1100,10 @@ template <unsigned int SizeT>
 char* MakePETIL(char(&Buffer)[SizeT])
 {
 	PSPAWNINFO Pet = GetSpawnByID(pLocalPlayer->PetID);
-#if defined (ROF2EMU)
-	if (pPetInfoWnd && Pet) sprintf_s(Buffer, "%d:%d", Pet->SpawnID, (Pet->HPCurrent * 100 / Pet->HPMax));
-#else
-	if (pPetInfoWnd && Pet) sprintf_s(Buffer, "%d:%I64d", Pet->SpawnID, (Pet->HPCurrent * 100 / Pet->HPMax));
-#endif
-	else strcpy_s(Buffer, ":");
+	if (pPetInfoWnd && Pet)
+		sprintf_s(Buffer, "%d:%d", Pet->SpawnID, static_cast<int32_t>(Pet->HPCurrent * 100 / Pet->HPMax));
+	else
+		strcpy_s(Buffer, ":");
 	return Buffer;
 }
 
@@ -1199,12 +1221,10 @@ char* MakeAAPTS(char(&Buffer)[SizeT])
 template <unsigned int SizeT>
 char* MakeTARGT(char(&Buffer)[SizeT])
 {
-#if defined (ROF2EMU)
-	if (pTarget) sprintf_s(Buffer, "%d:%d", pTarget->SpawnID, (pTarget->HPCurrent * 100 / pTarget->HPMax));
-#else
-	if (pTarget) sprintf_s(Buffer, "%d:%I64d", pTarget->SpawnID, (pTarget->HPCurrent * 100 / pTarget->HPMax));
-#endif
-	else strcpy_s(Buffer, ":");
+	if (pTarget)
+		sprintf_s(Buffer, "%d:%d", pTarget->SpawnID, static_cast<int32_t>(pTarget->HPCurrent * 100 / pTarget->HPMax));
+	else
+		strcpy_s(Buffer, ":");
 	return Buffer;
 }
 
@@ -1466,6 +1486,7 @@ void BroadCast()
 	sprintf_s(wBuffer[EQBC], "J=%s|", MakeEQBC(Buffer));
 	sprintf_s(wBuffer[FREEINV], "I=%s|", MakeFREEINV(Buffer));
 	sprintf_s(wBuffer[GROUPLEADER], "-=%s|", MakeGROUPLEADER(Buffer));
+	sprintf_s(wBuffer[LUAINFO], "K=%s|", MakeLUA(Buffer));
 	//  WriteChatf("D=%s|", Buffer);
 	for (int i = 0; i < ESIZE; i++)
 		if ((clock() > sTimers[i] && clock() > sTimers[i] + UPDATES) || 0 != strcmp(wBuffer[i], sBuffer[i]))
@@ -1527,7 +1548,7 @@ public:
 		Level = 12,
 		PctExp = 13,
 		PctAAExp = 14,
-#ifdef EMU
+#if HAS_LEADERSHIP_EXPERIENCE
 		PctGroupLeaderExp = 15,
 #endif
 		CurrentHPs = 16,
@@ -1631,6 +1652,7 @@ public:
 		HeartBeat = 114,
 		FreeInventory = 115,
 		GroupLeader = 116,
+		Lua = 117,
 	};
 
 	MQ2NetBotsType() :MQ2Type("NetBots")
@@ -1648,7 +1670,7 @@ public:
 		TypeMember(Level);
 		TypeMember(PctExp);
 		TypeMember(PctAAExp);
-#ifdef EMU
+#if HAS_LEADERSHIP_EXPERIENCE
 		TypeMember(PctGroupLeaderExp);
 #endif
 		TypeMember(CurrentHPs);
@@ -1752,6 +1774,7 @@ public:
 		TypeMember(HeartBeat);
 		TypeMember(FreeInventory);
 		TypeMember(GroupLeader);
+		TypeMember(Lua);
 	}
 
 	void Search(const char* Index)
@@ -1884,7 +1907,7 @@ public:
 					Dest.Float = (float)BotRec->aaXP / 1000.0f;
 #endif
 					return true;
-#ifdef EMU
+#if HAS_LEADERSHIP_EXPERIENCE
 				case PctGroupLeaderExp:
 					Dest.Type = pFloatType;
 					Dest.Float = (float)(BotRec->glXP / 10.0f);
@@ -2704,6 +2727,11 @@ public:
 					Dest.Type = pStringType;
 					Dest.Ptr = Temps;
 					return true;
+				case Lua:
+					strcpy_s(Temps, BotRec->LuaInfo);
+					Dest.Type = pStringType;
+					Dest.Ptr = Temps;
+					return true;
 				}
 			}
 		}
@@ -2905,7 +2933,7 @@ PLUGIN_API void InitializePlugin()
 	Packet.AddEvent("#*#[NB]#*#|T=#14#:#15#|#*#[NB]", ParseInfo, (void*)15);
 	Packet.AddEvent("#*#[NB]#*#|C=#16#|#*#[NB]", ParseInfo, (void*)16);
 	Packet.AddEvent("#*#[NB]#*#|Y=#17#|#*#[NB]", ParseInfo, (void*)17);
-#ifdef EMU
+#if HAS_LEADERSHIP_EXPERIENCE
 	Packet.AddEvent("#*#[NB]#*#|X=#18#:#19#:#20#|#*#[NB]", ParseInfo, (void*)20);
 #else
 	Packet.AddEvent("#*#[NB]#*#|X=#18#:#19#|#*#[NB]", ParseInfo, (void*)19);
@@ -2937,6 +2965,7 @@ PLUGIN_API void InitializePlugin()
 	Packet.AddEvent("#*#[NB]#*#|J=#102#|#*#[NB]", ParseInfo, (void*)102);
 	Packet.AddEvent("#*#[NB]#*#|I=#103#|#*#[NB]", ParseInfo, (void*)103);
 	Packet.AddEvent("#*#[NB]#*#|-=#104#|#*#[NB]", ParseInfo, (void*)104);
+	Packet.AddEvent("#*#[NB]#*#|K=#105#|#*#[NB]", ParseInfo, (void*)105);
 	ZeroMemory(sTimers, sizeof(sTimers));
 	ZeroMemory(sBuffer, sizeof(sBuffer));
 	ZeroMemory(wBuffer, sizeof(wBuffer));
