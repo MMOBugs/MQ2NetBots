@@ -904,7 +904,7 @@ char* MakeLUA(char(&Buffer)[SizeT])
 	{
 		sprintf_s(szScriptName, "${Lua.Script[%s].Name}", token);
 		ParseMacroData(szScriptName, sizeof(szScriptName));
-		if (szScriptName[0] && !_stricmp(szScriptName, "NULL"))
+		if (szScriptName[0] && _stricmp(szScriptName, "NULL"))
 		{
 			if (strlen(Buffer))
 				strcat_s(Buffer, ",");
