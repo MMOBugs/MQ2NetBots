@@ -155,7 +155,7 @@ public:
 	long              Duration[NUM_LONG_BUFFS]; // Buff duration
 	long              FreeBuff;            // FreeBuffSlot;
 	char			  GroupLeader[64];	   // Group Leader Name
-#ifdef HAS_LEADERSHIP_EXPERIENCE
+#if HAS_LEADERSHIP_EXPERIENCE
 	double            glXP;                // glXP
 #endif
 	DWORD             aaXP;                // aaXP
@@ -678,7 +678,7 @@ void __stdcall ParseInfo(unsigned int ID, void* pData, PBLECHVALUE pValues)
 			case 17: CurBot->State = (DWORD)atol(pValues->Value.c_str());  break;
 			case 18: CurBot->XP = (__int64)atol(pValues->Value.c_str()); break;
 			case 19: CurBot->aaXP = (DWORD)atol(pValues->Value.c_str()); break;
-#ifdef HAS_LEADERSHIP_EXPERIENCE
+#if HAS_LEADERSHIP_EXPERIENCE
 			case 20: CurBot->glXP = GetDoubleFromString(pValues->Value, 0.0);        break;
 #endif
 			case 21: CurBot->FreeBuff = atol(pValues->Value.c_str());        break;
@@ -842,7 +842,7 @@ char* MakeENDUS(char(&Buffer)[SizeT])
 template <unsigned int SizeT>
 char* MakeEXPER(char(&Buffer)[SizeT])
 {
-#ifdef HAS_LEADERSHIP_EXPERIENCE
+#if HAS_LEADERSHIP_EXPERIENCE
 	sprintf_s(Buffer, "%I64d:%d:%02.3f", pLocalPC->Exp, pLocalPC->AAExp, pLocalPC->GroupLeadershipExp);
 #else
 	sprintf_s(Buffer, "%I64d:%d", pLocalPC->Exp, pLocalPC->AAExp);
