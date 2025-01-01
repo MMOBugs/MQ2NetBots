@@ -781,12 +781,9 @@ char* MakeBUFFS(char(&Buffer)[SizeT])
 			strcat_s(Buffer, tmp);
 		}
 	}
-	if (strlen(Buffer))
-	{
-		sprintf_s(tmp, "|F=${Me.FreeBuffSlots}");
-		ParseMacroData(tmp, sizeof(tmp));
-		strcat_s(Buffer, tmp);
-	}
+	sprintf_s(tmp, "|F=${Me.FreeBuffSlots}");
+	ParseMacroData(tmp, sizeof(tmp));
+	strcat_s(Buffer, tmp);
 	return Buffer;
 }
 
