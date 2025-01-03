@@ -111,7 +111,7 @@ enum
 	PETIL, SPGEM, SONGS, STATE, TARGT, ZONES, DURAS, LOCAT, HEADN,
 	AAPTS, OOCST, NOTE, DETR, MSTATE, MNAME, NAVACT, NAVPAU, NVERS,
 	BOTACT, CAMPSTATUS, CAMPX, CAMPY, CAMPRADIUS, CAMPDISTANCE, EQBC,
-	FREEINV, GROUPLEADER, LUAINFO, ESIZE
+	FREEINV, GROUPLEADER, LUAINFO, QUERY, ESIZE
 };
 
 enum
@@ -187,30 +187,32 @@ public:
 	ULONGLONG         EQBC_Packets;
 	ULONGLONG         EQBC_HeartBeat;
 	int				  FreeInventory;
+	char			  Query[MAX_STRING];
 };
 
 #define TIME unsigned long long
 
-long                NetInit = 0;           // Plugin Initialized?
-long                NetStat = 0;           // Plugin is On?
-long                NetGrab = 0;           // Grab Information?
-long                NetSend = 0;           // Send Information?
-long                NetLast = 0;           // Last Send Time Mark
-char                NetNote[NOTE_MAX];   // Network Note
-TIME				NetShow = 0;			// Flag for showing UI window
+long                NetInit = 0;				// Plugin Initialized?
+long                NetStat = 0;				// Plugin is On?
+long                NetGrab = 0;				// Grab Information?
+long                NetSend = 0;				// Send Information?
+long                NetLast = 0;				// Last Send Time Mark
+char                NetNote[NOTE_MAX];			// Network Note
+TIME				NetShow = 0;				// Flag for showing UI window
+char				NetQuery[MAX_STRING];		// Network Query
 
-map<string, BotInfo, PredIgnoreCase> NetMap;              // BotInfo Mapped List
-Blech               Packet('#');         // BotInfo Event Triggers
-BotInfo* CurBot = 0;            // BotInfo Current
+map<string, BotInfo, PredIgnoreCase> NetMap;	// BotInfo Mapped List
+Blech               Packet('#');				// BotInfo Event Triggers
+BotInfo* CurBot = 0;							// BotInfo Current
 
-long                sTimers[ESIZE];      // Save Timers
-char                sBuffer[ESIZE][MAX_STRING]; // Save Buffer
-char                wBuffer[ESIZE][MAX_STRING]; // Work Buffer
-bool                wChange[ESIZE];      // Work Change
-bool                wUpdate[ESIZE];      // Work Update
+long                sTimers[ESIZE];				// Save Timers
+char                sBuffer[ESIZE][MAX_STRING];	// Save Buffer
+char                wBuffer[ESIZE][MAX_STRING];	// Work Buffer
+bool                wChange[ESIZE];				// Work Change
+bool                wUpdate[ESIZE];				// Work Update
 int                 dValues[DSIZE];
-bool				bExtended = false;   // Allow extended info?
-bool				bUseSimpleSearch = false;  // Allow any substring of Buff/ShortBuff/PetBuff to return result
+bool				bExtended = false;			// Allow extended info?
+bool				bUseSimpleSearch = false;	// Allow any substring of Buff/ShortBuff/PetBuff to return result
 
 bool				bSendBuffs = false;
 bool				bSendPetBuffs = false;
@@ -238,6 +240,13 @@ long Evaluate(char* zFormat, ...)
 	return atoi(zOutput);
 }
 
+bool NetParseMacroData(PCHAR szOriginal, SIZE_T BufferSize)
+{
+	int oldParserVersion = std::exchange(gParserVersion, 2);
+	bool result = ParseMacroData(szOriginal, BufferSize);
+	gParserVersion = oldParserVersion;
+	return result;
+}
 
 bool EQBCConnected()
 {
@@ -740,6 +749,8 @@ void __stdcall ParseInfo(unsigned int ID, void* pData, PBLECHVALUE pValues)
 				strcpy_s(CurBot->GroupLeader, pValues->Value.c_str()); break;
 			case 105:
 				strcpy_s(CurBot->LuaInfo, pValues->Value.c_str()); break;
+			case 106:
+				strcpy_s(CurBot->Query, pValues->Value.c_str()); break;
 			}
 			pValues = pValues->pNext;
 		}
@@ -909,6 +920,16 @@ char* MakeLUA(char(&Buffer)[SizeT])
 		}
 		token = strtok_s(NULL, ",", &next_token);
 	}
+	return Buffer;
+}
+
+template <unsigned int SizeT>
+char* MakeQUERY(char(&Buffer)[SizeT])
+{
+	char tmp[MAX_STRING] = { 0 };
+	strcpy_s(tmp, NetQuery);
+	NetParseMacroData(tmp, sizeof(tmp));
+	strcpy_s(Buffer, tmp);
 	return Buffer;
 }
 
@@ -1484,6 +1505,7 @@ void BroadCast()
 	sprintf_s(wBuffer[FREEINV], "I=%s|", MakeFREEINV(Buffer));
 	sprintf_s(wBuffer[GROUPLEADER], "-=%s|", MakeGROUPLEADER(Buffer));
 	sprintf_s(wBuffer[LUAINFO], "K=%s|", MakeLUA(Buffer));
+	sprintf_s(wBuffer[QUERY], "Q=%s|", MakeQUERY(Buffer));
 	//  WriteChatf("D=%s|", Buffer);
 	for (int i = 0; i < ESIZE; i++)
 		if ((clock() > sTimers[i] && clock() > sTimers[i] + UPDATES) || 0 != strcmp(wBuffer[i], sBuffer[i]))
@@ -1650,6 +1672,7 @@ public:
 		FreeInventory = 115,
 		GroupLeader = 116,
 		Lua = 117,
+		Query = 118,
 	};
 
 	MQ2NetBotsType() :MQ2Type("NetBots")
@@ -1772,6 +1795,7 @@ public:
 		TypeMember(FreeInventory);
 		TypeMember(GroupLeader);
 		TypeMember(Lua);
+		TypeMember(Query);
 	}
 
 	void Search(const char* Index)
@@ -2729,6 +2753,11 @@ public:
 					Dest.Type = pStringType;
 					Dest.Ptr = Temps;
 					return true;
+				case Query:
+					strcpy_s(Temps, BotRec->Query);
+					Dest.Type = pStringType;
+					Dest.Ptr = Temps;
+					return true;
 				}
 			}
 		}
@@ -2812,6 +2841,35 @@ void Command(PSPAWNINFO pChar, PCHAR Cmd)
 			bUseSimpleSearch = _strnicmp(Set, "off", 3) ? true : false;
 			WritePrivateProfileString(PLUGIN_TITLE, "UseSimpleSearch", bUseSimpleSearch ? "1" : "0", INIFileName);
 		}
+		else if (!_strnicmp(Var, "load", 4))
+		{
+			if (gGameState == GAMESTATE_INGAME)
+			{
+				char GlobalINIFileName[MAX_STRING] = { 0 };
+				sprintf_s(GlobalINIFileName, "%s\\%s.ini", gPathConfig, PLUGIN_TITLE);
+				GetPrivateProfileString("Settings", "Query", "", NetQuery, MAX_STRING, GlobalINIFileName);
+				WritePrivateProfileString("Settings", "Query", NetQuery, GlobalINIFileName);
+				sprintf_s(INIFileName, "%s\\%s_%s.ini", gPathConfig, GetServerShortName(), pLocalPC->Name);
+				NetStat = GetPrivateProfileInt(PLUGIN_TITLE, "Stat", 0, INIFileName);
+				WritePrivateProfileString(PLUGIN_TITLE, "Stat", NetStat ? "1" : "0", INIFileName);
+				NetGrab = GetPrivateProfileInt(PLUGIN_TITLE, "Grab", 0, INIFileName);
+				WritePrivateProfileString(PLUGIN_TITLE, "Grab", NetGrab ? "1" : "0", INIFileName);
+				NetSend = GetPrivateProfileInt(PLUGIN_TITLE, "Send", 0, INIFileName);
+				WritePrivateProfileString(PLUGIN_TITLE, "Send", NetSend ? "1" : "0", INIFileName);
+				bExtended = 0 != GetPrivateProfileInt(PLUGIN_TITLE, "Extended", 0, INIFileName);
+				WritePrivateProfileString(PLUGIN_TITLE, "Extended", bExtended ? "1" : "0", INIFileName);
+				bUseSimpleSearch = 0 != GetPrivateProfileInt(PLUGIN_TITLE, "UseSimpleSearch", 0, INIFileName);
+				WritePrivateProfileString(PLUGIN_TITLE, "UseSimpleSearch", bUseSimpleSearch ? "1" : "0", INIFileName);
+				NetInit = true;
+				NetShow = GetPrivateProfileInt(PLUGIN_NAME, "Show", 0, INIFileName);
+				WritePrivateProfileString(PLUGIN_TITLE, "Show", NetShow ? "1" : "0", INIFileName);
+				if (NetShow)
+					ShowMyWindow();
+				ZeroMemory(sTimers, sizeof(sTimers));
+				if (NetStat && NetSend && EQBCConnected())
+					EQBCBroadCast("[NB]|Z=:>|[NB]");
+			}
+		}
 	} while (strlen(Tmp));
 	WriteChatf("%s:: (%s) Grab (%s) Send (%s) Ext (%s) Simple (%s)    Version=\at%.2f", PLUGIN_TITLE, NetStat ? "\agon\ax" : "\aroff\ax", NetGrab ? "\agon\ax" : "\aroff\ax", NetSend ? "\agon\ax" : "\aroff\ax", bExtended ? "\agon\ax" : "\aroff\ax", bUseSimpleSearch ? "\agon\ax" : "\aroff\ax", MQ2Version);
 }
@@ -2889,6 +2947,9 @@ PLUGIN_API void SetGameState(DWORD GameState)
 #if    DEBUGGING>0
 			DebugSpewAlways("%s->SetGameState(%d)->Loading", PLUGIN_TITLE, GameState);
 #endif DEBUGGING
+			char GlobalINIFileName[MAX_STRING] = { 0 };
+			sprintf_s(GlobalINIFileName, "%s\\%s.ini", gPathConfig, PLUGIN_TITLE);
+			GetPrivateProfileString("Settings", "Query", "", NetQuery, MAX_STRING, GlobalINIFileName);
 			sprintf_s(INIFileName, "%s\\%s_%s.ini", gPathConfig, GetServerShortName(), pLocalPC->Name);
 			NetStat = GetPrivateProfileInt(PLUGIN_TITLE, "Stat", 0, INIFileName);
 			NetGrab = GetPrivateProfileInt(PLUGIN_TITLE, "Grab", 0, INIFileName);
@@ -2963,6 +3024,7 @@ PLUGIN_API void InitializePlugin()
 	Packet.AddEvent("#*#[NB]#*#|I=#103#|#*#[NB]", ParseInfo, (void*)103);
 	Packet.AddEvent("#*#[NB]#*#|-=#104#|#*#[NB]", ParseInfo, (void*)104);
 	Packet.AddEvent("#*#[NB]#*#|K=#105#|#*#[NB]", ParseInfo, (void*)105);
+	Packet.AddEvent("#*#[NB]#*#|Q=#106#|#*#[NB]", ParseInfo, (void*)106);
 	ZeroMemory(sTimers, sizeof(sTimers));
 	ZeroMemory(sBuffer, sizeof(sBuffer));
 	ZeroMemory(wBuffer, sizeof(wBuffer));
@@ -2978,6 +3040,9 @@ PLUGIN_API void InitializePlugin()
 	AddXMLFile("MQUI_NetBotsWnd.xml");
 	if (gGameState == GAMESTATE_INGAME)
 	{
+		char GlobalINIFileName[MAX_STRING] = { 0 };
+		sprintf_s(GlobalINIFileName, "%s\\%s.ini", gPathConfig, PLUGIN_TITLE);
+		GetPrivateProfileString("Settings", "Query", "", NetQuery, MAX_STRING, GlobalINIFileName);
 		sprintf_s(INIFileName, "%s\\%s_%s.ini", gPathConfig, GetServerShortName(), pLocalPC->Name);
 		NetStat = GetPrivateProfileInt(PLUGIN_TITLE, "Stat", 0, INIFileName);
 		NetGrab = GetPrivateProfileInt(PLUGIN_TITLE, "Grab", 0, INIFileName);
