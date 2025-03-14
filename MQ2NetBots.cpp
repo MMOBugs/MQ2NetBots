@@ -37,8 +37,13 @@
 
 using namespace std;
 
+PreSetup("MQ2NetBots");
 
 double compile_date();
+#define PLUGIN_VERS compile_date()
+
+PLUGIN_VERSION(PLUGIN_VERS);
+
 #define        PLUGIN_DATE           compile_date()
 #define	       PLUGIN_TITLE          "MQ2NetBots"
 
@@ -52,9 +57,6 @@ double compile_date();
 #define        UIUPDATE              100
 
 #define        DEBUGGING             0
-
-PreSetup("MQ2NetBots");
-PLUGIN_VERSION(4.00);
 
 double compile_date()
 {
@@ -1420,6 +1422,13 @@ char* MakeDETR(char(&Buffer)[SizeT])
 					case SPA_CORRUPTION:
 						dValues[CORRUPTED] += (int)GetSpellBase(spell, s);
 						d = true;
+						break;
+					case SPA_CANCEL_NEGATIVE_MAGIC:
+						d = true;
+						break;
+					default:
+						if (spell->PvPDuration)
+							d = true;
 						break;
 					}
 				if (d)
@@ -3270,6 +3279,18 @@ void WndListSetPerc(CListWnd* pWnd, int R, int C, long Cur, long Max)
 		WndListPrintf(pWnd, R, C, 0xFFFFA000, "%3.0f", v);
 }
 
+void WndListSetDist(CListWnd* pWnd, int R, int C, float Dist)
+{
+	if (Dist >= 100.0)
+		WndListPrintf(pWnd, R, C, 0xFFF55442, "%5.1f", Dist);
+	else if (Dist >= 65.0)
+		WndListPrintf(pWnd, R, C, 0xFFFAE423, "%5.1f", Dist);
+	else if (Dist >= 30.0)
+		WndListPrintf(pWnd, R, C, 0xFF27A2CF, "%5.1f", Dist);
+	else
+		WndListPrintf(pWnd, R, C, 0xFF2DCF27, "%5.1f", Dist);
+}
+
 DWORD GetNameColor(BotInfo* BotRec)
 {
 	if (!BotRec)
@@ -3285,7 +3306,6 @@ DWORD GetNameColor(BotInfo* BotRec)
 	return 0xFFFFFFFF;
 }
 
-
 void WindowSetDY(CSidlScreenWnd* pWindow, long DY)
 {
 	long T = pWindow->GetLocation().top;
@@ -3300,8 +3320,6 @@ void WindowSetDY(CSidlScreenWnd* pWindow, long DY)
 	);
 }
 
-
-
 void WindowUpdate()
 {
 	static int MaxLines = 0;
@@ -3311,6 +3329,9 @@ void WindowUpdate()
 	NetShow = MQGetTickCount64() + 100;
 	if (MyWnd->IsVisible())
 	{
+		float DX;
+		float DY;
+		float DZ;
 		DWORD White = 0xFFFFFFFF;
 		DWORD Color = White;
 		map<string, BotInfo>::iterator l;
@@ -3329,6 +3350,12 @@ void WindowUpdate()
 			WndListSetPerc(MyWnd->List, R, 0, BotRec->ManaCur, BotRec->ManaMax);
 			WndListSetPerc(MyWnd->List, R, 1, BotRec->EnduCur, BotRec->EnduMax);
 			WndListSetPerc(MyWnd->List, R, 2, BotRec->LifeCur, BotRec->LifeMax);
+
+			// Print out distance
+			DX = pLocalPlayer->X - BotRec->X;
+			DY = pLocalPlayer->Y - BotRec->Y;
+			DZ = pLocalPlayer->Z - BotRec->Z;
+			WndListSetDist(MyWnd->List, R, 3, sqrt(DX * DX + DY * DY + DZ * DZ));
 
 			// Prep State String
 			sprintf_s(zOutput, " ");
@@ -3353,11 +3380,11 @@ void WindowUpdate()
 			if (BotRec->State & STATE_DEAD)
 				zOutput[0] = 'x';
 
-			WndListPrintf(MyWnd->List, R, 3, White, zOutput);
+			WndListPrintf(MyWnd->List, R, 4, White, zOutput);
 
 			// Print out name
 			Color = GetNameColor(BotRec);
-			WndListPrintf(MyWnd->List, R, 4, Color, BotRec->Name);
+			WndListPrintf(MyWnd->List, R, 5, Color, BotRec->Name);
 
 			// Print out Target - shorten if too long
 			char* p = zOutput;
@@ -3370,17 +3397,17 @@ void WindowUpdate()
 				if (strlen(zOutput) > 12)
 					p = &zOutput[strlen(zOutput) - 12];
 			}
-			WndListPrintf(MyWnd->List, R, 5, White, p);
+			WndListPrintf(MyWnd->List, R, 6, White, p);
 
 			// Print out Action field
 			if (BotRec->CastID)
-				WndListPrintf(MyWnd->List, R, 6, White, GetSpellByID(BotRec->CastID)->Name);
+				WndListPrintf(MyWnd->List, R, 7, White, GetSpellByID(BotRec->CastID)->Name);
 			else if (BotRec->State & STATE_ATTACK)
-				WndListPrintf(MyWnd->List, R, 6, White, "Melee");
+				WndListPrintf(MyWnd->List, R, 7, White, "Melee");
 			else if (BotRec->State & STATE_RANGED)
-				WndListPrintf(MyWnd->List, R, 6, White, "Ranged");
+				WndListPrintf(MyWnd->List, R, 7, White, "Ranged");
 			else
-				WndListPrintf(MyWnd->List, R, 6, White, "");
+				WndListPrintf(MyWnd->List, R, 7, White, "");
 
 			// If we have selected someone from the list pop them up
 			if (CurSel == R)
@@ -3399,7 +3426,7 @@ void WindowUpdate()
 		// If we lost some characters clear the old data
 		for (int i = R; i < MaxLines; i++)
 		{
-			for (int C = 0; C <= 6; C++)
+			for (int C = 0; C <= 7; C++)
 				WndListPrintf(MyWnd->List, i, C, White, "");
 		}
 
