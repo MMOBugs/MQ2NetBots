@@ -2110,7 +2110,7 @@ public:
 					return true;
 				case InZone:
 					Dest.Type = pBoolType;
-					Dest.DWord = (inZoned(BotRec->ZoneID, BotRec->InstID));
+					Dest.DWord = inZoned(BotRec->ZoneID, BotRec->InstID);
 					return true;
 				case InGroup:
 					Dest.Type = pBoolType;
@@ -3352,10 +3352,17 @@ void WindowUpdate()
 			WndListSetPerc(MyWnd->List, R, 2, BotRec->LifeCur, BotRec->LifeMax);
 
 			// Print out distance
-			DX = pLocalPlayer->X - BotRec->X;
-			DY = pLocalPlayer->Y - BotRec->Y;
-			DZ = pLocalPlayer->Z - BotRec->Z;
-			WndListSetDist(MyWnd->List, R, 3, sqrt(DX * DX + DY * DY + DZ * DZ));
+			if (inZoned(BotRec->ZoneID, BotRec->InstID))
+			{
+				DX = pLocalPlayer->X - BotRec->X;
+				DY = pLocalPlayer->Y - BotRec->Y;
+				DZ = pLocalPlayer->Z - BotRec->Z;
+				WndListSetDist(MyWnd->List, R, 3, sqrt(DX * DX + DY * DY + DZ * DZ));
+			}
+			else
+			{
+				WndListPrintf(MyWnd->List, R, 3, 0xFFD61818, "---");
+			}
 
 			// Prep State String
 			sprintf_s(zOutput, " ");
