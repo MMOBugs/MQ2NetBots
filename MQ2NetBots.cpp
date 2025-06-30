@@ -3092,6 +3092,7 @@ class CMyWnd : public CCustomWnd
 public:
 	CListWnd* List = nullptr;
 	int       ErrorLoading = 0;
+	char WindowTitle[MAX_STRING] = { 0 };
 
 	CMyWnd() : CCustomWnd("NetBotsWnd")
 	{
@@ -3329,6 +3330,14 @@ void WindowUpdate()
 	NetShow = MQGetTickCount64() + 100;
 	if (MyWnd->IsVisible())
 	{
+		char GlobalINIFileName[MAX_STRING] = { 0 }, szTitle[MAX_STRING] = { 0 };
+		sprintf_s(GlobalINIFileName, "%s\\%s.ini", gPathConfig, PLUGIN_TITLE);
+		GetPrivateProfileString("Settings", "WindowTitle", "", szTitle, MAX_STRING, GlobalINIFileName);
+		if (!szTitle[0])
+			WritePrivateProfileString("Settings", "WindowTitle", PLUGIN_NAME, GlobalINIFileName);
+		strcpy_s(MyWnd->WindowTitle, szTitle);
+		ParseMacroData(szTitle, MAX_STRING);
+		MyWnd->SetWindowText(szTitle);
 		float DX;
 		float DY;
 		float DZ;
