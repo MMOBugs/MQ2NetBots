@@ -1827,7 +1827,7 @@ public:
 		}
 		else if (Index)
 		{
-			if (BotRec)
+			if (BotRec && BotRec != nullptr && BotRec->Name && BotRec->Name[0])
 			{
 				if (_stricmp(BotRec->Name, Index))
 				{
