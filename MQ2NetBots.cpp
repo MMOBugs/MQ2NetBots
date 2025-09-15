@@ -3333,8 +3333,11 @@ void WindowUpdate()
 		char GlobalINIFileName[MAX_STRING] = { 0 }, szTitle[MAX_STRING] = { 0 };
 		sprintf_s(GlobalINIFileName, "%s\\%s.ini", gPathConfig, PLUGIN_TITLE);
 		GetPrivateProfileString("Settings", "WindowTitle", "", szTitle, MAX_STRING, GlobalINIFileName);
-		if (!szTitle[0])
-			WritePrivateProfileString("Settings", "WindowTitle", PLUGIN_NAME, GlobalINIFileName);
+		if (!szTitle[0] && gGameState == GAMESTATE_INGAME && pLocalPlayer)
+		{
+			sprintf_s(szTitle, "%s (${NetBots.Counts})", PLUGIN_NAME);
+			WritePrivateProfileString("Settings", "WindowTitle", szTitle, GlobalINIFileName);
+		}
 		strcpy_s(MyWnd->WindowTitle, szTitle);
 		ParseMacroData(szTitle, MAX_STRING);
 		MyWnd->SetWindowText(szTitle);
