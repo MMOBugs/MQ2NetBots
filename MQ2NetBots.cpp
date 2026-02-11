@@ -232,7 +232,7 @@ void WindowUpdate();
 //=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=//
 char zOutput[MAX_STRING] = { 0 };
 
-long Evaluate(char* zFormat, ...)
+long Evaluate(const char* zFormat, ...)
 {
 	va_list vaList; va_start(vaList, zFormat);
 	vsprintf_s(zOutput, zFormat, vaList); if (!zOutput[0]) return 1;
@@ -242,7 +242,7 @@ long Evaluate(char* zFormat, ...)
 	return atoi(zOutput);
 }
 
-bool NetParseMacroData(PCHAR szOriginal, SIZE_T BufferSize)
+bool NetParseMacroData(char* szOriginal, SIZE_T BufferSize)
 {
 	int oldParserVersion = std::exchange(gParserVersion, 2);
 	bool result = ParseMacroData(szOriginal, BufferSize);
@@ -261,7 +261,7 @@ bool EQBCConnected()
 	return false;
 }
 
-void EQBCBroadCast(PCHAR Buffer)
+void EQBCBroadCast(const char* Buffer)
 {
 	using fEqbcNetBotSendMsg = void(*)(const char*);
 	if (strlen(Buffer) > 9)
@@ -3205,7 +3205,7 @@ void ReadWindowINI(CSidlScreenWnd* pWindow)
 	pWindow->SetBGColor(col.ARGB);
 }
 
-template <unsigned int SizeT>LPSTR SafeItoa(int _Value, char(&_Buffer)[SizeT], int _Radix)
+template <unsigned int SizeT>const char* SafeItoa(int _Value, char(&_Buffer)[SizeT], int _Radix)
 {
 	errno_t err = _itoa_s(_Value, _Buffer, _Radix);
 	if (!err)
@@ -3249,7 +3249,7 @@ void WriteWindowINI(CSidlScreenWnd* pWindow)
 	WritePrivateProfileString(szSection, "BGTint.blue", SafeItoa(col.B, szTemp, 10), szFileName);
 }
 
-void WndListPrintf(CListWnd* pWnd, int R, int C, long Color, char* zFormat, ...)
+void WndListPrintf(CListWnd* pWnd, int R, int C, long Color, const char* zFormat, ...)
 {
 	va_list vaList;
 	va_start(vaList, zFormat);
