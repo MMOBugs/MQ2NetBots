@@ -242,7 +242,7 @@ long Evaluate(const char* zFormat, ...)
 	return atoi(zOutput);
 }
 
-bool NetParseMacroData(char* szOriginal, SIZE_T BufferSize)
+bool NetParseMacroData(PCHAR szOriginal, SIZE_T BufferSize)
 {
 	int oldParserVersion = std::exchange(gParserVersion, 2);
 	bool result = ParseMacroData(szOriginal, BufferSize);
