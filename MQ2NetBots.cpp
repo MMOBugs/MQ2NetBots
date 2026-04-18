@@ -109,7 +109,7 @@ enum
 
 enum
 {
-	BUFFS, CASTD, ENDUS, EXPER, LEADR, LEVEL, LIFES, MANAS, PBUFF,
+	BUFFS, FREEBUFFS, CASTD, ENDUS, EXPER, LEADR, LEVEL, LIFES, MANAS, PBUFF,
 	PETIL, SPGEM, SONGS, STATE, TARGT, ZONES, DURAS, LOCAT, HEADN,
 	AAPTS, OOCST, NOTE, DETR, MSTATE, MNAME, NAVACT, NAVPAU, NVERS,
 	BOTACT, CAMPSTATUS, CAMPX, CAMPY, CAMPRADIUS, CAMPDISTANCE, EQBC,
@@ -753,6 +753,8 @@ void __stdcall ParseInfo(unsigned int ID, void* pData, PBLECHVALUE pValues)
 				strcpy_s(CurBot->LuaInfo, pValues->Value.c_str()); break;
 			case 106:
 				strcpy_s(CurBot->Query, pValues->Value.c_str()); break;
+			case 107:
+				CurBot->FreeBuff = atoi(pValues->Value.c_str()); break;
 			}
 			pValues = pValues->pNext;
 		}
@@ -794,9 +796,21 @@ char* MakeBUFFS(char(&Buffer)[SizeT])
 			strcat_s(Buffer, tmp);
 		}
 	}
-	sprintf_s(tmp, "|F=${Me.FreeBuffSlots}");
-	ParseMacroData(tmp, sizeof(tmp));
-	strcat_s(Buffer, tmp);
+	return Buffer;
+}
+
+template <unsigned int SizeT>
+char* MakeFreeBUFFS(char(&Buffer)[SizeT])
+{
+	long SpellID;
+	Buffer[0] = '\0';
+	int BuffSlots = GetCharMaxBuffSlots();
+	for (int i = 0; i < NUM_LONG_BUFFS; ++i)
+	{
+		if ((SpellID = GetPcProfile()->GetEffect(i).SpellID) > 0)
+			BuffSlots--;
+	}
+	sprintf_s(Buffer, "%d", BuffSlots);
 	return Buffer;
 }
 
@@ -1515,6 +1529,7 @@ void BroadCast()
 	sprintf_s(wBuffer[GROUPLEADER], "-=%s|", MakeGROUPLEADER(Buffer));
 	sprintf_s(wBuffer[LUAINFO], "K=%s|", MakeLUA(Buffer));
 	sprintf_s(wBuffer[QUERY], "Q=%s|", MakeQUERY(Buffer));
+	sprintf_s(wBuffer[FREEBUFFS], "F=%s|", MakeFreeBUFFS(Buffer));
 	//  WriteChatf("D=%s|", Buffer);
 	for (int i = 0; i < ESIZE; i++)
 		if ((clock() > sTimers[i] && clock() > sTimers[i] + UPDATES) || 0 != strcmp(wBuffer[i], sBuffer[i]))
@@ -3034,6 +3049,7 @@ PLUGIN_API void InitializePlugin()
 	Packet.AddEvent("#*#[NB]#*#|-=#104#|#*#[NB]", ParseInfo, (void*)104);
 	Packet.AddEvent("#*#[NB]#*#|K=#105#|#*#[NB]", ParseInfo, (void*)105);
 	Packet.AddEvent("#*#[NB]#*#|Q=#106#|#*#[NB]", ParseInfo, (void*)106);
+	Packet.AddEvent("#*#[NB]#*#|F=#107#|#*#[NB]", ParseInfo, (void*)107);
 	ZeroMemory(sTimers, sizeof(sTimers));
 	ZeroMemory(sBuffer, sizeof(sBuffer));
 	ZeroMemory(wBuffer, sizeof(wBuffer));
