@@ -3268,15 +3268,17 @@ void WriteWindowINI(CSidlScreenWnd* pWindow)
 void WndListPrintf(CListWnd* pWnd, int R, int C, long Color, const char* zFormat, ...)
 {
 	va_list vaList;
-	va_start(vaList, zFormat);
-	char szTemp[MAX_STRING];
-	vsprintf_s(szTemp, MAX_STRING, zFormat, vaList);
-	if (pWnd)
+	if (zFormat)
 	{
-		pWnd->SetItemText(R, C, szTemp);
-		pWnd->SetItemColor(R, C, Color);
+		va_start(vaList, zFormat);
+		char szTemp[MAX_STRING];
+		vsprintf_s(szTemp, MAX_STRING, zFormat, vaList);
+		if (pWnd)
+		{
+			pWnd->SetItemText(R, C, szTemp);
+			pWnd->SetItemColor(R, C, Color);
+		}
 	}
-
 }
 
 void WndListSetPerc(CListWnd* pWnd, int R, int C, long Cur, long Max)
