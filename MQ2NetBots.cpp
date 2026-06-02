@@ -232,6 +232,21 @@ void WindowUpdate();
 //=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=//
 char zOutput[MAX_STRING] = { 0 };
 
+std::string replaceAll(
+	std::string str,
+	const std::string& from,
+	const std::string& to)
+{
+	auto&& pos = str.find(from, size_t{});
+	while (pos != std::string::npos)
+	{
+		str.replace(pos, from.length(), to);
+		// easy to forget to add to.length()
+		pos = str.find(from, pos + to.length());
+	}
+	return str;
+}
+
 long Evaluate(const char* zFormat, ...)
 {
 	va_list vaList; va_start(vaList, zFormat);
@@ -3439,8 +3454,7 @@ void WindowUpdate()
 			// Print out Action field
 			if (BotRec->CastID)
 			{
-				std::string SpellName = GetSpellByID(BotRec->CastID)->Name;
-				SpellName.replace(SpellName.find("%"), 1, "%%");
+				std::string SpellName = replaceAll(GetSpellByID(BotRec->CastID)->Name, "%", "%%");
 				WndListPrintf(MyWnd->List, R, 7, White, SpellName.c_str());
 			}
 			else if (BotRec->State & STATE_ATTACK)
