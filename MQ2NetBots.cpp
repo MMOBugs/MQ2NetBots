@@ -3438,7 +3438,11 @@ void WindowUpdate()
 
 			// Print out Action field
 			if (BotRec->CastID)
-				WndListPrintf(MyWnd->List, R, 7, White, GetSpellByID(BotRec->CastID)->Name);
+			{
+				std::string SpellName = GetSpellByID(BotRec->CastID)->Name;
+				SpellName.replace(SpellName.find("%"), 1, "%%");
+				WndListPrintf(MyWnd->List, R, 7, White, SpellName.c_str());
+			}
 			else if (BotRec->State & STATE_ATTACK)
 				WndListPrintf(MyWnd->List, R, 7, White, "Melee");
 			else if (BotRec->State & STATE_RANGED)
